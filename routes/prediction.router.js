@@ -16,11 +16,14 @@ router.post("/", authenticateToken, async (req, res) => {
     return res.status(400).json({ message: "All fields are required" });
   }
 
-  if (!userId) {
-    return res.status(400).json({ message: "User ID is required" });
-  }
-
   try {
+    const existingPrediction = await Prediction.findOne({ fixtureId, userId });
+    if (existingPrediction) {
+      return res
+        .status(400)
+        .json({ message: "Prediction already exists for this fixture" });
+    }
+
     const newPrediction = new Prediction({
       fixtureId,
       userId,
@@ -30,13 +33,20 @@ router.post("/", authenticateToken, async (req, res) => {
     });
 
     await newPrediction.save();
-
     res.status(201).json(newPrediction);
   } catch (error) {
     console.error("Error saving prediction:", error);
-    res
-      .status(400)
-      .json({ message: "Error saving prediction", error: error.message });
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
+router.get("/:userId", authenticateToken, async (req, res) => {
+  try {
+    const predictions = await Prediction.find({ userId: req.params.userId });
+    res.status(200).json(predictions);
+  } catch (error) {
+    console.error("Error fetching predictions:", error);
+    res.status(500).json({ message: "Server error" });
   }
 });
 
