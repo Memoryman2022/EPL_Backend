@@ -3,7 +3,6 @@ const router = express.Router();
 const RealResult = require("../models/RealResult.model");
 const Prediction = require("../models/Predictions.model");
 const User = require("../models/User.model");
-const { updateGroupStandings } = require("../utils/updateGroupStandings");
 const updateUserPositionsAndMovements = require("../utils/userPosition");
 
 // Route to fetch all real results

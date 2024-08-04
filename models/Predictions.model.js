@@ -1,27 +1,27 @@
 const mongoose = require("mongoose");
-const { Schema } = mongoose;
 
-const predictionSchema = new Schema(
-  {
-    userId: { type: Schema.Types.ObjectId, ref: "User", required: true },
-    gameId: { type: String, required: true },
-    date: { type: String, required: true },
-    team1: { type: String, required: true },
-    team2: { type: String, required: true },
-    team1Score: { type: Number, required: true },
-    team2Score: { type: Number, required: true },
-    predictedOutcome: {
-      type: String,
-      enum: ["team1", "draw", "team2"],
-      required: true,
-    },
-    confirmed: { type: Boolean, default: false },
+const PredictionSchema = new mongoose.Schema({
+  fixtureId: {
+    type: Number,
+    required: true,
   },
-  {
-    timestamps: true,
-  }
-);
+  userId: {
+    type: String,
+    required: true,
+  },
+  homeScore: {
+    type: Number,
+    required: true,
+  },
+  awayScore: {
+    type: Number,
+    required: true,
+  },
+  outcome: {
+    type: String,
+    required: true,
+    enum: ["homeWin", "awayWin", "draw"],
+  },
+});
 
-const Prediction = mongoose.model("Prediction", predictionSchema);
-
-module.exports = Prediction;
+module.exports = mongoose.model("Prediction", PredictionSchema);

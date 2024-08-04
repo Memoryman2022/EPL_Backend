@@ -1,7 +1,5 @@
-// config.js/
 require("dotenv").config();
 
-// const isDevelopment = process.env.NODE_ENV === "development"
 const MONGO_URI =
   process.env.NODE_ENV === "development"
     ? process.env.MONGODB_URI_LOCAL
@@ -9,7 +7,7 @@ const MONGO_URI =
 
 const allowedOrigins = [
   "http://localhost:5173", // Frontend server
-  process.env.ORIGIN, // Production frontend URL from environment variables
+  // process.env.ORIGIN, // Production frontend URL from environment variables
   // "https://eurosweepstake2024.netlify.app",
 ];
 
