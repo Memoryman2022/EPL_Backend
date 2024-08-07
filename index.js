@@ -59,11 +59,14 @@ app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 app.use("/api/auth", authRoutes);
 app.use("/api/users", userRoutes);
 app.use("/api/predictions", predictionRoutes);
-app.use("/api/realresults", realResultRoutes);
+app.use("/api/results", realResultRoutes);
 
 // Error handling middleware
 app.use(errorHandler);
 app.use(notFoundHandler);
+
+//update results at midnight
+require("./utils/updateResultsCron");
 
 // Start the server
 const PORT = process.env.PORT || 3000;

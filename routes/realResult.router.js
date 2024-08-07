@@ -1,138 +1,80 @@
 const express = require("express");
 const router = express.Router();
-const RealResult = require("../models/RealResult.model");
-const Prediction = require("../models/Predictions.model");
-const User = require("../models/User.model");
-const updateUserPositionsAndMovements = require("../utils/userPosition");
+const axios = require("axios");
+const RealResult = require("../models/RealResult.model.js");
+const { authenticateToken } = require("../middleware/authenticateToken.js");
 
-// Route to fetch all real results
-router.get("/", async (req, res, next) => {
+// Fetch and update match results
+router.get("/updateResults", authenticateToken, async (req, res) => {
   try {
-    const realResults = await RealResult.find();
-    res.status(200).json(realResults);
+    const response = await axios.get(
+      "https://api.football-data.org/v4/competitions/2021/matches?status=FINISHED",
+      {
+        headers: {
+          "X-Auth-Token": process.env.FOOTBALL_API_TOKEN,
+        },
+      }
+    );
+    const matches = response.data.matches;
+    for (const match of matches) {
+      const outcome = getOutcomeFromScore(match.score);
+      const realResultData = {
+        fixtureId: match.id,
+        homeTeam: match.homeTeam.name,
+        awayTeam: match.awayTeam.name,
+        homeScore: match.score.fullTime.homeTeam,
+        awayScore: match.score.fullTime.awayTeam,
+        outcome,
+        date: match.utcDate,
+      };
+      // Upsert the match result to the database
+      await RealResult.findOneAndUpdate(
+        { fixtureId: match.id },
+        realResultData,
+        {
+          upsert: true,
+          new: true,
+        }
+      );
+    }
+    res.status(200).json({ message: "Match results updated successfully" });
   } catch (error) {
-    console.error("Error fetching real results:", error);
-    next(error);
+    console.error("Error updating match results:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 });
 
-// Route to fetch the real result of a specific game
-router.get("/:gameId/result", async (req, res, next) => {
+// Fetch match result by fixture ID
+router.get("/:fixtureId", authenticateToken, async (req, res) => {
   try {
-    const { gameId } = req.params;
-    const realResult = await RealResult.findOne({ gameId });
+    const { fixtureId } = req.params;
+    console.log("Querying for fixtureId:", fixtureId);
 
-    if (!realResult) {
-      console.warn(`Real result not found for game ID: ${gameId}`);
-      return res.status(404).json({ message: "Real result not found" });
+    // Validate fixtureId if needed
+    if (!fixtureId || isNaN(fixtureId)) {
+      return res.status(400).json({ message: "Invalid fixture ID" });
     }
 
-    res.status(200).json(realResult);
+    const result = await RealResult.findOne({ fixtureId: Number(fixtureId) });
+    console.log("Query result:", result);
+
+    if (!result) {
+      return res.status(404).json({ message: "Match result not found" });
+    }
+
+    res.json(result);
   } catch (error) {
-    console.error(`Error fetching real result for game ID: ${gameId}`, error);
-    next(error);
+    console.error("Error fetching match result:", error);
+    res.status(500).json({ message: "Failed to fetch match result" });
   }
 });
 
-// Route to save the real result for a specific game
-router.post("/:gameId/result", async (req, res, next) => {
-  try {
-    const { gameId } = req.params;
-    const { team1, team2, team1Score, team2Score, outcome } = req.body;
-
-    console.log(`Saving real result for game ID: ${gameId}`);
-    console.log(
-      `Team 1: ${team1}, Team 2: ${team2}, Team 1 Score: ${team1Score}, Team 2 Score: ${team2Score}, Outcome: ${outcome}`
-    );
-
-    // Ensure the data matches the schema
-    if (
-      typeof gameId !== "string" ||
-      typeof team1 !== "string" ||
-      typeof team2 !== "string" ||
-      typeof team1Score !== "number" ||
-      typeof team2Score !== "number" ||
-      !["team1", "draw", "team2"].includes(outcome)
-    ) {
-      throw new Error("Data does not match schema requirements");
-    }
-
-    const realResult = await RealResult.findOneAndUpdate(
-      { gameId },
-      { gameId, team1, team2, team1Score, team2Score, outcome },
-      { new: true, upsert: true }
-    );
-
-    console.log("Real result saved:", realResult);
-
-    // Fetch all predictions for this game
-    const predictions = await Prediction.find({ gameId });
-    console.log(
-      `Found ${predictions.length} predictions for game ID: ${gameId}`
-    );
-
-    // Update user scores based on predictions
-    for (const prediction of predictions) {
-      let points = 0;
-      let correctScore = false;
-      let correctOutcome = false;
-
-      // Correct score prediction
-      if (
-        prediction.team1Score === team1Score &&
-        prediction.team2Score === team2Score
-      ) {
-        points += 5;
-        correctScore = true;
-      }
-
-      // Correct outcome prediction
-      if (prediction.predictedOutcome === outcome) {
-        points += 2;
-        correctOutcome = true;
-      }
-
-      // Log the prediction details for debugging
-      console.log(`Prediction details:`, {
-        userId: prediction.userId,
-        gameId: prediction.gameId,
-        team1Score: prediction.team1Score,
-        team2Score: prediction.team2Score,
-        predictedOutcome: prediction.predictedOutcome,
-        realTeam1Score: team1Score,
-        realTeam2Score: team2Score,
-        realOutcome: outcome,
-        pointsAwarded: points,
-        correctScore,
-        correctOutcome,
-      });
-
-      // Update the user's score
-      const user = await User.findById(prediction.userId);
-      if (user) {
-        user.score += points;
-        if (correctScore) user.correctScores += 1;
-        if (correctOutcome) user.correctOutcomes += 1;
-        await user.save();
-        console.log(`Updated score for user ${user._id}: ${user.score}`);
-      }
-    }
-
-    // Update user positions and movements
-    await updateUserPositionsAndMovements();
-
-    // Update group standings
-    await updateGroupStandings();
-
-    res
-      .status(200)
-      .json({ message: "Real result and user scores updated successfully" });
-  } catch (error) {
-    console.error("Error saving real result or updating user scores:", error);
-    res
-      .status(500)
-      .json({ message: "Internal server error", error: error.message });
-  }
-});
+// Helper function to determine outcome
+const getOutcomeFromScore = (score) => {
+  if (score.winner === "HOME_TEAM") return "homeWin";
+  if (score.winner === "AWAY_TEAM") return "awayWin";
+  if (score.winner === "DRAW") return "draw";
+  return "unknown";
+};
 
 module.exports = router;

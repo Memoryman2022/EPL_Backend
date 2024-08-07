@@ -1,24 +1,17 @@
+// models/RealResult.model.js
 const mongoose = require("mongoose");
-const { Schema } = mongoose;
+const Schema = mongoose.Schema;
 
-const realResultSchema = new Schema(
-  {
-    gameId: { type: String, required: true, unique: true },
-    team1: { type: String, required: true },
-    team2: { type: String, required: true },
-    team1Score: { type: Number, required: true },
-    team2Score: { type: Number, required: true },
-    outcome: {
-      type: String,
-      enum: ["team1", "draw", "team2"],
-      required: true,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
+const realResultSchema = new Schema({
+  fixtureId: { type: Number, required: true, unique: true },
+  homeTeam: { type: String, required: true },
+  awayTeam: { type: String, required: true },
+  homeScore: { type: Number, required: true },
+  awayScore: { type: Number, required: true },
+  outcome: { type: String, required: true },
+  date: { type: Date, required: true },
+});
 
-const RealResult = mongoose.model("RealResult", realResultSchema);
+const RealResult = mongoose.model("RealResult", realResultSchema, "results");
 
 module.exports = RealResult;
