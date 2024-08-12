@@ -8,7 +8,8 @@
     "test": "echo \"Error: no test specified\" && exit 1",
     "start": "NODE_ENV=production node index.js",
     "dev": "NODE_ENV=development nodemon index.js",
-    "stop": "kill-port 3000"
+    "stop": "kill-port 3000",
+    "restart": "npm run stop && npm run dev"
   },
   "keywords": [],
   "author": "",
