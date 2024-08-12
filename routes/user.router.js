@@ -14,11 +14,11 @@ router.get(
     try {
       const userId = req.params.userId;
 
-      if (!mongoose.Types.ObjectId.isValid(req.params.userId)) {
+      if (!mongoose.Types.ObjectId.isValid(userId)) {
         throw new AppError("Invalid user ID", 400);
       }
 
-      const user = await User.findById(req.params.userId);
+      const user = await User.findById(userId);
 
       if (!user) {
         throw new AppError("User not found", 404);
@@ -90,18 +90,25 @@ router.put("/updateScore", async (req, res, next) => {
     user.correctOutcomes += correctOutcomes;
     user.previousPosition = previousPosition; // Ensure previousPosition is updated
 
-    // Calculate the new position
-    const allUsers = await User.find({}).sort({ score: -1 });
-    const newPosition =
-      allUsers.findIndex((u) => u._id.toString() === userId) + 1;
-
-    user.position = newPosition;
-
+    // Save the updated user
     await user.save();
 
-    res.status(200).json({ message: "User scores updated successfully" });
+    // Recalculate positions for all users
+    const allUsers = await User.find({}).sort({ score: -1 });
+
+    // Update positions for each user based on the sorted order
+    await Promise.all(
+      allUsers.map(async (u, index) => {
+        u.position = index + 1;
+        await u.save();
+      })
+    );
+
+    res
+      .status(200)
+      .json({ message: "User scores and positions updated successfully" });
   } catch (error) {
-    console.error("Error updating user scores:", error);
+    console.error("Error updating user scores and positions:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -120,32 +127,8 @@ router.put("/update-movements", async (req, res) => {
     }
     res.status(200).send({ message: "User movements updated successfully" });
   } catch (error) {
+    console.error("Failed to update user movements:", error);
     res.status(500).send({ error: "Failed to update user movements" });
-  }
-});
-
-// Update user scores (new route)
-router.post("/updateScore", async (req, res, next) => {
-  try {
-    const { userId, score } = req.body;
-
-    if (!mongoose.Types.ObjectId.isValid(userId)) {
-      throw new AppError("Invalid user ID", 400);
-    }
-
-    const user = await User.findById(userId);
-
-    if (!user) {
-      throw new AppError("User not found", 404);
-    }
-
-    user.score = score;
-    await user.save();
-
-    res.status(200).json({ message: "Score updated successfully" });
-  } catch (error) {
-    console.error("Error updating score:", error);
-    next(error);
   }
 });
 
