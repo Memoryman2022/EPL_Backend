@@ -6,8 +6,6 @@ const morgan = require("morgan");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
-const cron = require("node-cron");
-const axios = require("axios");
 
 const app = express();
 const server = createServer(app);
