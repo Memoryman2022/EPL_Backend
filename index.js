@@ -8,6 +8,7 @@ const path = require("path");
 const fs = require("fs");
 
 const app = express();
+
 const server = createServer(app);
 
 const authRoutes = require("./routes/auth.router");
@@ -62,9 +63,6 @@ app.use("/api/results", realResultRoutes);
 // Error handling middleware
 app.use(errorHandler);
 app.use(notFoundHandler);
-
-//update results at midnight
-require("./utils/updateResultsCron");
 
 // Start the server
 const PORT = process.env.PORT || 3000;

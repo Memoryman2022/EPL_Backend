@@ -69,6 +69,17 @@ router.get("/:fixtureId", authenticateToken, async (req, res) => {
   }
 });
 
+// Fetch all match results
+router.get("/", authenticateToken, async (req, res) => {
+  try {
+    const results = await RealResult.find({});
+    res.json(results);
+  } catch (error) {
+    console.error("Error fetching match results:", error);
+    res.status(500).json({ message: "Failed to fetch match results" });
+  }
+});
+
 // Helper function to determine outcome
 const getOutcomeFromScore = (score) => {
   if (score.winner === "HOME_TEAM") return "homeWin";

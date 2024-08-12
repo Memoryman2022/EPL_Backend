@@ -63,4 +63,17 @@ router.get("/fixture/:fixtureId", authenticateToken, async (req, res) => {
   }
 });
 
+// Example routes in prediction.router.js
+router.get("/", authenticateToken, async (req, res) => {
+  try {
+    const predictions = await Prediction.find({});
+    res.json(predictions);
+  } catch (error) {
+    console.error("Error fetching predictions:", error);
+    console.error("Error details:", error.stack);
+
+    res.status(500).json({ message: "Failed to fetch predictions" });
+  }
+});
+
 module.exports = router;
