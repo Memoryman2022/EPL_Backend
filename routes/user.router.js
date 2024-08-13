@@ -119,12 +119,20 @@ router.put("/update-movements", async (req, res) => {
 
   try {
     for (let userData of users) {
-      await User.findByIdAndUpdate(userData._id, {
-        movement: userData.movement,
-        position: userData.position,
-        previousPosition: userData.previousPosition,
+      const { _id, movement, position, previousPosition } = userData;
+
+      // Ensure `movement` is a valid string ('up' or 'down')
+      if (movement !== "up" && movement !== "down") {
+        throw new Error(`Invalid movement value: ${movement}`);
+      }
+
+      await User.findByIdAndUpdate(_id, {
+        movement,
+        position,
+        previousPosition,
       });
     }
+
     res.status(200).send({ message: "User movements updated successfully" });
   } catch (error) {
     console.error("Failed to update user movements:", error);
