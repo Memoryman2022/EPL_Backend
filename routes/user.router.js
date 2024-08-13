@@ -90,25 +90,18 @@ router.put("/updateScore", async (req, res, next) => {
     user.correctOutcomes += correctOutcomes;
     user.previousPosition = previousPosition; // Ensure previousPosition is updated
 
-    // Save the updated user
+    // Calculate the new position
+    const allUsers = await User.find({}).sort({ score: -1 });
+    const newPosition =
+      allUsers.findIndex((u) => u._id.toString() === userId) + 1;
+
+    user.position = newPosition;
+
     await user.save();
 
-    // Recalculate positions for all users
-    const allUsers = await User.find({}).sort({ score: -1 });
-
-    // Update positions for each user based on the sorted order
-    await Promise.all(
-      allUsers.map(async (u, index) => {
-        u.position = index + 1;
-        await u.save();
-      })
-    );
-
-    res
-      .status(200)
-      .json({ message: "User scores and positions updated successfully" });
+    res.status(200).json({ message: "User scores updated successfully" });
   } catch (error) {
-    console.error("Error updating user scores and positions:", error);
+    console.error("Error updating user scores:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 });
@@ -119,20 +112,23 @@ router.put("/update-movements", async (req, res) => {
 
   try {
     for (let userData of users) {
-      const { _id, movement, position, previousPosition } = userData;
+      console.log("Updating user:", userData); // Add a log for debugging
 
-      // Ensure `movement` is a valid string ('up' or 'down')
-      if (movement !== "up" && movement !== "down") {
-        throw new Error(`Invalid movement value: ${movement}`);
+      // Allow `movement` to be either 'up', 'down', or an empty string
+      if (
+        userData.movement !== "up" &&
+        userData.movement !== "down" &&
+        userData.movement !== ""
+      ) {
+        throw new Error(`Invalid movement value: ${userData.movement}`);
       }
 
-      await User.findByIdAndUpdate(_id, {
-        movement,
-        position,
-        previousPosition,
+      await User.findByIdAndUpdate(userData._id, {
+        movement: userData.movement,
+        position: userData.position,
+        previousPosition: userData.previousPosition,
       });
     }
-
     res.status(200).send({ message: "User movements updated successfully" });
   } catch (error) {
     console.error("Failed to update user movements:", error);
