@@ -7,8 +7,8 @@ const MONGO_URI =
 
 const allowedOrigins = [
   "http://localhost:5173", // Frontend server
-  // process.env.ORIGIN, // Production frontend URL from environment variables
-  // "https://eurosweepstake2024.netlify.app",
+  process.env.ORIGIN, // Production frontend URL from environment variables
+  "https://EPL2024.netlify.app",
 ];
 
 module.exports = {
